@@ -704,13 +704,58 @@ module bsg_chip
   assign dmc_p.dqs_sel_cal  = dmc_cfg_tag_data_lo[10][1:0];
   assign dmc_p.init_cmd_cnt = dmc_cfg_tag_data_lo[10][5:2];
   wire   dmc_sys_reset_li   = dmc_cfg_tag_data_lo[11][0];
+  
+  parameter clk_ratio_p = 12;
+  parameter clk_period_p = 3000;
+  
+  logic axi_clk_lo, dfi_2x_clk_lo;
+  bsg_nonsynth_clock_gen
+ #(.cycle_time_p(clk_period_p)
+  ) dmc_clkgen
+  (.o(axi_clk_lo));
+
+  logic ds_async_reset_lo, ds_reset_lo;
+  bsg_nonsynth_reset_gen 
+ #(.reset_cycles_lo_p(10)
+  ,.reset_cycles_hi_p(10)
+  ) ds_rstgen
+  (.clk_i            (axi_clk_lo)
+  ,.async_reset_o    (ds_async_reset_lo)
+  );
+  bsg_sync_sync 
+ #(.width_p(1)
+  ) ds_bss
+  (.oclk_i     (axi_clk_lo)
+  ,.iclk_data_i(ds_async_reset_lo)
+  ,.oclk_data_o(ds_reset_lo)
+  );
+  
+  bsg_counter_clock_downsample 
+ #(.width_p(32)
+  ) dmc_ds
+  (.clk_i  (axi_clk_lo)
+  ,.reset_i(ds_reset_lo)
+  ,.val_i  (clk_ratio_p/4-1)
+  ,.clk_r_o(dfi_2x_clk_lo)
+  );
+  
+  logic axi_reset_lo;
+  bsg_sync_sync 
+ #(.width_p(1)
+  ) axi_bss
+  (.oclk_i     (axi_clk_lo)
+  ,.iclk_data_i(dmc_sys_reset_li)
+  ,.oclk_data_o(axi_reset_lo)
+  );
+  
 
   bsg_dmc #
     (.num_adgs_p            ( clk_gen_num_adgs_gp )
     ,.ui_addr_width_p       ( dmc_addr_width_gp   )
     ,.ui_data_width_p       ( cce_block_width_p   )
     ,.burst_data_width_p    ( cce_block_width_p   )
-    ,.dq_data_width_p       ( dmc_data_width_gp   ))
+    ,.dq_data_width_p       ( dmc_data_width_gp   )
+    ,.clk_ratio_p           ( clk_ratio_p ))
   dmc
     (.async_reset_tag_i     ( dmc_reset_tag_lines_lo       )
     ,.bsg_dly_tag_i         ( dmc_dly_tag_lines_lo         )
@@ -774,12 +819,15 @@ module bsg_chip
     ,.ddr_dq_i              ( ddr_dq_li            )
 
     ,.ui_clk_i              ( router_clk_lo        )
-    ,.dfi_clk_2x_i          ( dfi_clk_2x_lo        )
+    ,.dfi_clk_2x_i          ( dfi_2x_clk_lo        )
     ,.dfi_clk_1x_o          ( dfi_clk_1x_lo        )
 
     ,.ui_clk_sync_rst_o     (                      )
 
-    ,.device_temp_o         (                      ));
+    ,.device_temp_o         (                      )
+    
+    ,.axi_clk_i  (axi_clk_lo)
+    ,.axi_reset_i(axi_reset_lo));
 
   assign ddr_ba_0_o_int = ddr_ba_lo[0];
   assign ddr_ba_1_o_int = ddr_ba_lo[1];

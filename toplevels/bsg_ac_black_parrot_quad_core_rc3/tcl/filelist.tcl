@@ -264,7 +264,6 @@ set SVERILOG_SOURCE_FILES [join "
   $basejump_stl_dir/bsg_tag/bsg_tag_client.v
   $basejump_stl_dir/bsg_tag/bsg_tag_client_unsync.v
 
-  $basejump_stl_dir/bsg_dmc/bsg_dmc.v
   $basejump_stl_dir/bsg_dmc/bsg_dmc_controller.v
   $basejump_stl_dir/bsg_dmc/bsg_dmc_phy.v
   $basejump_stl_dir/bsg_dmc/bsg_dmc_clk_rst_gen.v
@@ -278,6 +277,11 @@ set SVERILOG_SOURCE_FILES [join "
   $bsg_designs_target_dir/v/bsg_clk_gen_power_domain.v
   $bsg_designs_target_dir/v/bsg_clk_gen_osc.v
   $bsg_designs_target_dir/v/bp_me_cce_to_xui.v
+
+  $basejump_stl_dir/bsg_test/bsg_nonsynth_clock_gen.v
+  $basejump_stl_dir/bsg_test/bsg_nonsynth_reset_gen.v
+  $bsg_designs_target_dir/v/bsg_dfi_to_fifo.v
+  $bsg_designs_target_dir/v/bsg_dmc.v
 
   $bsg_packaging_dir/$bsg_package/pinouts/$bsg_pinout/common/verilog/bsg_chip_swizzle_adapter.v
 "]
