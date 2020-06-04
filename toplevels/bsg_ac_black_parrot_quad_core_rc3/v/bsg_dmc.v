@@ -138,16 +138,16 @@ module bsg_dmc
 
   wire             [dq_group_lp-1:0] dqs_p_li;
 
-  wire                               fifo_error;
-  wire                               fifo_wr_v;
-  wire                               fifo_wr_data;
-  wire                               fifo_wr_ready;
-  wire                               fifo_cmd_v;
-  wire                               fifo_cmd_data;
-  wire                               fifo_cmd_ready;
-  wire                               fifo_rd_yumi;
-  wire                               fifo_rd_v;
-  wire                               fifo_rd_data;
+  wire                                       fifo_error;
+  wire                                       fifo_wr_v;
+  wire [2*dq_data_width_p+2*dq_group_lp-1:0] fifo_wr_data;
+  wire                                       fifo_wr_ready;
+  wire                                       fifo_cmd_v;
+  wire                          [3+16+7-1:0] fifo_cmd_data;
+  wire                                       fifo_cmd_ready;
+  wire                                       fifo_rd_yumi;
+  wire                                       fifo_rd_v;
+  wire               [2*dq_data_width_p-1:0] fifo_rd_data;
 
   assign device_temp_o = 12'd0;
 
