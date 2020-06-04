@@ -53,7 +53,25 @@ module bsg_dfi_to_fifo
 */
 
   // handle write data
+  logic wr_toggle_r;
+  bsg_dff_reset #(.width_p(1)) wr_toggle_r_dff
+  (.clk_i  (dfi_clk_1x_i)
+  ,.reset_i(dfi_rst_i)
+  ,.data_i (~wr_toggle_r)
+  ,.data_o (wr_toggle_r)
+  );
   
+  logic wr_toggle_rr;
+  bsg_dff #(.width_p(1)) wr_toggle_rr_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (wr_toggle_r)
+  ,.data_o (wr_toggle_rr)
+  );
+  
+  assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
+  assign fifo_wr_v_o = dfi_wrdata_en_i & (wr_toggle_r ^ wr_toggle_rr);
+  
+/*
   wire w_async_fifo_full_lo;
   bsg_async_fifo
  #(.lg_size_p(3)
@@ -72,7 +90,6 @@ module bsg_dfi_to_fifo
   ,.r_valid_o(fifo_wr_v_o)
   );
   
-/*
   assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
   
   logic fifo_wr_v_lo;
@@ -112,7 +129,25 @@ module bsg_dfi_to_fifo
 */
 
   // handle cmd
+  logic cmd_toggle_r;
+  bsg_dff_reset #(.width_p(1)) cmd_toggle_r_dff
+  (.clk_i  (dfi_clk_1x_i)
+  ,.reset_i(dfi_rst_i)
+  ,.data_i (~cmd_toggle_r)
+  ,.data_o (cmd_toggle_r)
+  );
+  
+  logic cmd_toggle_rr;
+  bsg_dff #(.width_p(1)) cmd_toggle_rr_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (cmd_toggle_r)
+  ,.data_o (cmd_toggle_rr)
+  );
+  
+  assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
+  assign fifo_cmd_v_o = (~dfi_cs_n_i) & (cmd_toggle_r ^ cmd_toggle_rr);
 
+/*
   wire cmd_async_fifo_full_lo;
   bsg_async_fifo
  #(.lg_size_p(3)
@@ -131,7 +166,6 @@ module bsg_dfi_to_fifo
   ,.r_valid_o(fifo_cmd_v_o)
   );
 
-/*
   assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
   
   logic fifo_cmd_v_lo;
