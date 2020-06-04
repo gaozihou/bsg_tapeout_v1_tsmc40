@@ -592,6 +592,12 @@ module bsg_chip
   //localparam burst_data_width_p = cce_block_width_p;
   localparam dq_data_width_p = 32;
   //localparam dq_group_lp = dq_data_width_p >> 3;
+  localparam axi_id_width_p = 6;
+  localparam axi_addr_width_p = 64;
+  localparam axi_data_width_p = 256;
+  localparam axi_burst_len_p = 1;
+  localparam axi_mem_els_p = 4194304; // 2 Gb
+  localparam axi_strb_width_lp = axi_data_width_p>>3;
 
   wire                              app_en_lo;
   wire                              app_rdy_li;
@@ -629,6 +635,29 @@ module bsg_chip
   wire        [dq_data_width_p-1:0] ddr_dq_lo;
   wire        [dq_data_width_p-1:0] ddr_dq_oen_lo;
   
+  wire                              axi_awready;
+  wire         [axi_id_width_p-1:0] axi_awid;
+  wire       [axi_addr_width_p-1:0] axi_awaddr;
+  wire                              axi_awvalid;
+  wire                              axi_wready;
+  wire       [axi_data_width_p-1:0] axi_wdata;
+  wire      [axi_strb_width_lp-1:0] axi_wstrb;
+  wire                              axi_wlast;
+  wire                              axi_wvalid;
+  wire         [axi_id_width_p-1:0] axi_bid;
+  wire                        [1:0] axi_bresp;
+  wire                              axi_bvalid;
+  wire                              axi_bready;
+  wire                              axi_arready;
+  wire         [axi_id_width_p-1:0] axi_arid;
+  wire       [axi_addr_width_p-1:0] axi_araddr;
+  wire                              axi_arvalid;
+  wire         [axi_id_width_p-1:0] axi_rid;
+  wire       [axi_data_width_p-1:0] axi_rdata;
+  wire                        [1:0] axi_rresp;
+  wire                              axi_rlast;
+  wire                              axi_rvalid;
+  wire                              axi_rready;
 
   bp_me_cce_to_xui
    #(.bp_params_p(bp_params_p)
@@ -755,7 +784,11 @@ module bsg_chip
     ,.ui_data_width_p       ( cce_block_width_p   )
     ,.burst_data_width_p    ( cce_block_width_p   )
     ,.dq_data_width_p       ( dmc_data_width_gp   )
-    ,.clk_ratio_p           ( clk_ratio_p ))
+    ,.clk_ratio_p           ( clk_ratio_p         )
+    ,.axi_id_width_p        ( axi_id_width_p      )
+    ,.axi_addr_width_p      ( axi_addr_width_p    )
+    ,.axi_data_width_p      ( axi_data_width_p    )
+    ,.axi_burst_len_p       ( axi_burst_len_p    ))
   dmc
     (.async_reset_tag_i     ( dmc_reset_tag_lines_lo       )
     ,.bsg_dly_tag_i         ( dmc_dly_tag_lines_lo         )
@@ -826,8 +859,72 @@ module bsg_chip
 
     ,.device_temp_o         (                      )
     
-    ,.axi_clk_i  (axi_clk_lo)
-    ,.axi_reset_i(axi_reset_lo));
+    ,.axi_clk_i             ( axi_clk_lo           )
+    ,.axi_reset_i           ( axi_reset_lo         )
+    ,.axi_awready_i         ( axi_awready          )
+    ,.axi_awid_o            ( axi_awid             )
+    ,.axi_awaddr_o          ( axi_awaddr           )
+    ,.axi_awvalid_o         ( axi_awvalid           )
+    ,.axi_wready_i          ( axi_wready           )
+    ,.axi_wdata_o           ( axi_wdata            )
+    ,.axi_wstrb_o           ( axi_wstrb            )
+    ,.axi_wlast_o           ( axi_wlast            )
+    ,.axi_wvalid_o          ( axi_wvalid           )
+    ,.axi_bid_i             ( axi_bid              )
+    ,.axi_bresp_i           ( axi_bresp            )
+    ,.axi_bvalid_i          ( axi_bvalid           )
+    ,.axi_bready_o          ( axi_bready           )
+    ,.axi_arready_i         ( axi_arready          )
+    ,.axi_arid_o            ( axi_arid             )
+    ,.axi_araddr_o          ( axi_araddr           )
+    ,.axi_arvalid_o         ( axi_arvalid          )
+    ,.axi_rid_i             ( axi_rid              )
+    ,.axi_rdata_i           ( axi_rdata            )
+    ,.axi_rresp_i           ( axi_rresp            )
+    ,.axi_rlast_i           ( axi_rlast            )
+    ,.axi_rvalid_i          ( axi_rvalid           )
+    ,.axi_rready_o          ( axi_rready           )
+    );
+
+    bsg_nonsynth_manycore_axi_mem #(
+        .axi_id_width_p(axi_id_width_p)
+        ,.axi_addr_width_p(axi_addr_width_p)
+        ,.axi_data_width_p(axi_data_width_p)
+        ,.axi_burst_len_p(axi_burst_len_p)
+        ,.mem_els_p(axi_mem_els_p)
+        ,.bsg_dram_included_p(1)
+      ) axi_mem (
+        .clk_i(axi_clk_lo)
+        ,.reset_i(axi_reset_lo)
+
+        ,.axi_awid_i(axi_awid)
+        ,.axi_awaddr_i(axi_awaddr)
+        ,.axi_awvalid_i(axi_awvalid)
+        ,.axi_awready_o(axi_awready)
+
+        ,.axi_wdata_i(axi_wdata)
+        ,.axi_wstrb_i(axi_wstrb)
+        ,.axi_wlast_i(axi_wlast)
+        ,.axi_wvalid_i(axi_wvalid)
+        ,.axi_wready_o(axi_wready)
+
+        ,.axi_bid_o(axi_bid)
+        ,.axi_bresp_o(axi_bresp)
+        ,.axi_bvalid_o(axi_bvalid)
+        ,.axi_bready_i(axi_bready)
+
+        ,.axi_arid_i(axi_arid)
+        ,.axi_araddr_i(axi_araddr)
+        ,.axi_arvalid_i(axi_arvalid)
+        ,.axi_arready_o(axi_arready)
+
+        ,.axi_rid_o(axi_rid)
+        ,.axi_rdata_o(axi_rdata)
+        ,.axi_rresp_o(axi_rresp)
+        ,.axi_rlast_o(axi_rlast)
+        ,.axi_rvalid_o(axi_rvalid)
+        ,.axi_rready_i(axi_rready)
+      );
 
   assign ddr_ba_0_o_int = ddr_ba_lo[0];
   assign ddr_ba_1_o_int = ddr_ba_lo[1];

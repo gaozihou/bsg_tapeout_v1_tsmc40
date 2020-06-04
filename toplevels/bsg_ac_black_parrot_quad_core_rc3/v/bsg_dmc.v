@@ -7,9 +7,14 @@ module bsg_dmc
   ,parameter  burst_data_width_p = "inv"
   ,parameter  dq_data_width_p    = "inv"
   ,parameter  clk_ratio_p        = "inv"
+  ,parameter  axi_id_width_p     = "inv"
+  ,parameter  axi_addr_width_p   = "inv"
+  ,parameter  axi_data_width_p   = "inv"
+  ,parameter  axi_burst_len_p    = "inv"
   ,localparam ui_mask_width_lp   = ui_data_width_p >> 3
   ,localparam dfi_data_width_lp  = dq_data_width_p << 1
   ,localparam dfi_mask_width_lp  = (dq_data_width_p >> 3) << 1
+  ,localparam axi_strb_width_lp  = axi_data_width_p>>3
   ,localparam dq_group_lp        = dq_data_width_p >> 3)
   // Tag lines
   (input bsg_tag_s                   async_reset_tag_i
@@ -77,9 +82,36 @@ module bsg_dmc
   ,output                            ui_clk_sync_rst_o
   // Reserved to be compatible with Xilinx IPs
   ,output                     [11:0] device_temp_o
-  
-  ,input axi_clk_i
-  ,input axi_reset_i
+  // AXI interface 
+  ,input                             axi_clk_i
+  ,input                             axi_reset_i
+  ,input                             axi_awready_i
+  ,output       [axi_id_width_p-1:0] axi_awid_o
+  ,output     [axi_addr_width_p-1:0] axi_awaddr_o
+  ,output                            axi_awvalid_o
+  // write data
+  ,input                             axi_wready_i
+  ,output     [axi_data_width_p-1:0] axi_wdata_o
+  ,output    [axi_strb_width_lp-1:0] axi_wstrb_o
+  ,output                            axi_wlast_o
+  ,output                            axi_wvalid_o
+  // write response
+  ,input        [axi_id_width_p-1:0] axi_bid_i
+  ,input                       [1:0] axi_bresp_i
+  ,input                             axi_bvalid_i
+  ,output                            axi_bready_o
+  // read addr
+  ,input                             axi_arready_i
+  ,output       [axi_id_width_p-1:0] axi_arid_o
+  ,output     [axi_addr_width_p-1:0] axi_araddr_o
+  ,output                            axi_arvalid_o
+  // read data
+  ,input        [axi_id_width_p-1:0] axi_rid_i
+  ,input      [axi_data_width_p-1:0] axi_rdata_i
+  ,input                       [1:0] axi_rresp_i
+  ,input                             axi_rlast_i
+  ,input                             axi_rvalid_i
+  ,output                            axi_rready_o
 );
 
   wire                               dfi_clk_1x_lo;
@@ -105,6 +137,17 @@ module bsg_dmc
   wire                               dfi_rddata_valid;
 
   wire             [dq_group_lp-1:0] dqs_p_li;
+
+  wire                               fifo_error;
+  wire                               fifo_wr_v;
+  wire                               fifo_wr_data;
+  wire                               fifo_wr_ready;
+  wire                               fifo_cmd_v;
+  wire                               fifo_cmd_data;
+  wire                               fifo_cmd_ready;
+  wire                               fifo_rd_yumi;
+  wire                               fifo_rd_v;
+  wire                               fifo_rd_data;
 
   assign device_temp_o = 12'd0;
 
@@ -269,19 +312,63 @@ module bsg_dmc
   // fifo signals
   ,.fifo_clk_i      (axi_clk_i)
   ,.fifo_reset_i    (axi_reset_i)
-  ,.fifo_error_o    ()
+  ,.fifo_error_o    (fifo_error)
 
-  ,.fifo_wr_v_o     ()
-  ,.fifo_wr_data_o  ()
-  ,.fifo_wr_ready_i (1'b1)
+  ,.fifo_wr_v_o     (fifo_wr_v)
+  ,.fifo_wr_data_o  (fifo_wr_data)
+  ,.fifo_wr_ready_i (fifo_wr_ready)
 
-  ,.fifo_cmd_v_o    ()
-  ,.fifo_cmd_data_o ()
-  ,.fifo_cmd_ready_i(1'b1)
+  ,.fifo_cmd_v_o    (fifo_cmd_v)
+  ,.fifo_cmd_data_o (fifo_cmd_data)
+  ,.fifo_cmd_ready_i(fifo_cmd_ready)
 
-  ,.fifo_rd_v_i     (1'b1)
-  ,.fifo_rd_data_i  (64'hdeadbeefdeadbeef)
-  ,.fifo_rd_yumi_o  ()
+  ,.fifo_rd_v_i     (fifo_rd_v)
+  ,.fifo_rd_data_i  (fifo_rd_data)
+  ,.fifo_rd_yumi_o  (fifo_rd_yumi)
+  );
+
+  bsg_fifo_to_axi
+ #( .dq_data_width_p (dq_data_width_p)
+   ,.axi_id_width_p  (axi_id_width_p)
+   ,.axi_addr_width_p(axi_addr_width_p)
+   ,.axi_data_width_p(axi_data_width_p)
+   ,.axi_burst_len_p (axi_burst_len_p)
+  ) fifo_to_axi
+  (.clk_i           (axi_clk_i)
+  ,.reset_i         (axi_reset_i)
+  ,.fifo_error_i    (fifo_error)
+  ,.fifo_wr_v_i     (fifo_wr_v)
+  ,.fifo_wr_data_i  (fifo_wr_data)
+  ,.fifo_wr_ready_o (fifo_wr_ready)
+  ,.fifo_cmd_v_i    (fifo_cmd_v)
+  ,.fifo_cmd_data_i (fifo_cmd_data)
+  ,.fifo_cmd_ready_o(fifo_cmd_ready)
+  ,.fifo_rd_yumi_i  (fifo_rd_yumi)
+  ,.fifo_rd_v_o     (fifo_rd_v)
+  ,.fifo_rd_data_o  (fifo_rd_data)
+  ,.axi_awready_i
+  ,.axi_awid_o
+  ,.axi_awaddr_o
+  ,.axi_awvalid_o
+  ,.axi_wready_i
+  ,.axi_wdata_o
+  ,.axi_wstrb_o
+  ,.axi_wlast_o
+  ,.axi_wvalid_o
+  ,.axi_bid_i
+  ,.axi_bresp_i
+  ,.axi_bvalid_i
+  ,.axi_bready_o
+  ,.axi_arready_i
+  ,.axi_arid_o
+  ,.axi_araddr_o
+  ,.axi_arvalid_o
+  ,.axi_rid_i
+  ,.axi_rdata_i
+  ,.axi_rresp_i
+  ,.axi_rlast_i
+  ,.axi_rvalid_i
+  ,.axi_rready_o
   );
     
 
