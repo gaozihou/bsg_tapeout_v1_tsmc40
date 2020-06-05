@@ -3,6 +3,7 @@ module bsg_dfi_to_fifo
 
  #(parameter  clk_ratio_p     = "inv"
   ,parameter  dq_data_width_p = "inv"
+  ,parameter  num_sync_stages_p = 2
   ,localparam dq_group_lp     = dq_data_width_p >> 3
   )
   
@@ -43,8 +44,6 @@ module bsg_dfi_to_fifo
   ,input                [2*dq_data_width_p-1:0] fifo_rd_data_i
   ,output                                       fifo_rd_yumi_o
   );
-  
-  parameter num_sync_stages_p = 1;
 
   // handle write data
   logic wr_toggle_r;
