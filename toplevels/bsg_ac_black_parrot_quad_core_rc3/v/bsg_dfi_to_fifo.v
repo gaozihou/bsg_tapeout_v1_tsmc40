@@ -44,35 +44,39 @@ module bsg_dfi_to_fifo
   ,input                [2*dq_data_width_p-1:0] fifo_rd_data_i
   ,output                                       fifo_rd_yumi_o
   );
-
-  // handle write data
-  logic wr_toggle_r;
-  bsg_dff_reset #(.width_p(1)) wr_toggle_r_dff
+  
+  // handle dfi clock edge detection
+  logic dfi_toggle_r;
+  bsg_dff_reset #(.width_p(1)) dfi_toggle_r_dff
   (.clk_i  (dfi_clk_1x_i)
   ,.reset_i(dfi_rst_i)
-  ,.data_i (~wr_toggle_r)
-  ,.data_o (wr_toggle_r)
+  ,.data_i (~dfi_toggle_r)
+  ,.data_o (dfi_toggle_r)
   );
   
-  logic wr_toggle_rr;
+  logic dfi_toggle_rr;
   bsg_dff_chain 
  #(.width_p(1)
   ,.num_stages_p(num_sync_stages_p)
-  ) wr_toggle_rr_dff
+  ) dfi_toggle_rr_dff
   (.clk_i  (fifo_clk_i)
-  ,.data_i (wr_toggle_r)
-  ,.data_o (wr_toggle_rr)
+  ,.data_i (dfi_toggle_r)
+  ,.data_o (dfi_toggle_rr)
   );
   
-  logic wr_toggle_rrr;
-  bsg_dff_chain #(.width_p(1)) wr_toggle_rrr_dff
+  logic dfi_toggle_rrr;
+  bsg_dff #(.width_p(1)) dfi_toggle_rrr_dff
   (.clk_i  (fifo_clk_i)
-  ,.data_i (wr_toggle_rr)
-  ,.data_o (wr_toggle_rrr)
+  ,.data_i (dfi_toggle_rr)
+  ,.data_o (dfi_toggle_rrr)
   );
   
+  wire dfi_clk_edge_detected = dfi_toggle_rr ^ dfi_toggle_rrr;
+
+
+  // handle write data
   assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
-  assign fifo_wr_v_o = dfi_wrdata_en_i & (wr_toggle_rr ^ wr_toggle_rrr);
+  assign fifo_wr_v_o = dfi_wrdata_en_i & dfi_clk_edge_detected;
   
 /*
   wire w_async_fifo_full_lo;
@@ -95,33 +99,8 @@ module bsg_dfi_to_fifo
 */
 
   // handle cmd
-  logic cmd_toggle_r;
-  bsg_dff_reset #(.width_p(1)) cmd_toggle_r_dff
-  (.clk_i  (dfi_clk_1x_i)
-  ,.reset_i(dfi_rst_i)
-  ,.data_i (~cmd_toggle_r)
-  ,.data_o (cmd_toggle_r)
-  );
-  
-  logic cmd_toggle_rr;
-  bsg_dff_chain 
- #(.width_p(1)
-  ,.num_stages_p(num_sync_stages_p)
-  ) cmd_toggle_rr_dff
-  (.clk_i  (fifo_clk_i)
-  ,.data_i (cmd_toggle_r)
-  ,.data_o (cmd_toggle_rr)
-  );
-  
-  logic cmd_toggle_rrr;
-  bsg_dff #(.width_p(1)) cmd_toggle_rrr_dff
-  (.clk_i  (fifo_clk_i)
-  ,.data_i (cmd_toggle_rr)
-  ,.data_o (cmd_toggle_rrr)
-  );
-  
   assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
-  assign fifo_cmd_v_o = (~dfi_cs_n_i) & (cmd_toggle_rr ^ cmd_toggle_rrr);
+  assign fifo_cmd_v_o = (~dfi_cs_n_i) & dfi_clk_edge_detected;
 
 /*
   wire cmd_async_fifo_full_lo;
@@ -143,6 +122,7 @@ module bsg_dfi_to_fifo
   );
 */
 
+
   // handle read data
   bsg_dff_chain 
  #(.width_p     (1)
@@ -160,40 +140,14 @@ module bsg_dfi_to_fifo
   ,.data_o(dfi_rddata_valid_r)
   );
   
-  logic rd_toggle_r;
-  bsg_dff_reset #(.width_p(1)) rd_toggle_r_dff
-  (.clk_i  (dfi_clk_1x_i)
-  ,.reset_i(dfi_rst_i)
-  ,.data_i (~rd_toggle_r)
-  ,.data_o (rd_toggle_r)
-  );
-  
-  logic rd_toggle_rr;
-  bsg_dff_chain 
- #(.width_p(1)
-  ,.num_stages_p(num_sync_stages_p)
-  ) rd_toggle_rr_dff
-  (.clk_i  (fifo_clk_i)
-  ,.data_i (rd_toggle_r)
-  ,.data_o (rd_toggle_rr)
-  );
-  
-  logic rd_toggle_rrr;
-  bsg_dff #(.width_p(1)) rd_toggle_rrr_dff
-  (.clk_i  (fifo_clk_i)
-  ,.data_i (rd_toggle_rr)
-  ,.data_o (rd_toggle_rrr)
-  );
-  
   assign dfi_rddata_o = fifo_rd_data_i;
-  wire rd_clk_edge_detected = rd_toggle_rr ^ rd_toggle_rrr;
-  assign fifo_rd_yumi_o = dfi_rddata_valid_r & rd_clk_edge_detected;
+  assign fifo_rd_yumi_o = dfi_rddata_valid_r & dfi_clk_edge_detected;
   
   bsg_dff_reset_en #(.width_p(1)) error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (dfi_rddata_valid_o & ~fifo_rd_v_i)
-  ,.en_i   (rd_clk_edge_detected | fifo_rd_v_i)
+  ,.en_i   (dfi_clk_edge_detected | fifo_rd_v_i)
   ,.data_o (fifo_error_o)
   );
 
