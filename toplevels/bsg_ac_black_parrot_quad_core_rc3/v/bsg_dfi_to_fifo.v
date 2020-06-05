@@ -44,13 +44,7 @@ module bsg_dfi_to_fifo
   ,output                                       fifo_rd_yumi_o
   );
   
-  // error signal
-/*
-  logic wr_error_r, wr_error_n;
-  logic cmd_error_r, cmd_error_n;
-  logic rd_error_r, rd_error_n;
-  assign fifo_error_o = wr_error_r | cmd_error_r | rd_error_r;
-*/
+  parameter num_sync_stages_p = 1;
 
   // handle write data
   logic wr_toggle_r;
@@ -62,14 +56,24 @@ module bsg_dfi_to_fifo
   );
   
   logic wr_toggle_rr;
-  bsg_dff #(.width_p(1)) wr_toggle_rr_dff
+  bsg_dff_chain 
+ #(.width_p(1)
+  ,.num_stages_p(num_sync_stages_p)
+  ) wr_toggle_rr_dff
   (.clk_i  (fifo_clk_i)
   ,.data_i (wr_toggle_r)
   ,.data_o (wr_toggle_rr)
   );
   
+  logic wr_toggle_rrr;
+  bsg_dff_chain #(.width_p(1)) wr_toggle_rrr_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (wr_toggle_rr)
+  ,.data_o (wr_toggle_rrr)
+  );
+  
   assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
-  assign fifo_wr_v_o = dfi_wrdata_en_i & (wr_toggle_r ^ wr_toggle_rr);
+  assign fifo_wr_v_o = dfi_wrdata_en_i & (wr_toggle_rr ^ wr_toggle_rrr);
   
 /*
   wire w_async_fifo_full_lo;
@@ -138,14 +142,24 @@ module bsg_dfi_to_fifo
   );
   
   logic cmd_toggle_rr;
-  bsg_dff #(.width_p(1)) cmd_toggle_rr_dff
+  bsg_dff_chain 
+ #(.width_p(1)
+  ,.num_stages_p(num_sync_stages_p)
+  ) cmd_toggle_rr_dff
   (.clk_i  (fifo_clk_i)
   ,.data_i (cmd_toggle_r)
   ,.data_o (cmd_toggle_rr)
   );
   
+  logic cmd_toggle_rrr;
+  bsg_dff #(.width_p(1)) cmd_toggle_rrr_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (cmd_toggle_rr)
+  ,.data_o (cmd_toggle_rrr)
+  );
+  
   assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
-  assign fifo_cmd_v_o = (~dfi_cs_n_i) & (cmd_toggle_r ^ cmd_toggle_rr);
+  assign fifo_cmd_v_o = (~dfi_cs_n_i) & (cmd_toggle_rr ^ cmd_toggle_rrr);
 
 /*
   wire cmd_async_fifo_full_lo;
@@ -207,7 +221,7 @@ module bsg_dfi_to_fifo
   // handle read data
   bsg_dff_chain 
  #(.width_p     (1)
-  ,.num_stages_p(2)
+  ,.num_stages_p(2) // FIXED
   ) rdvalid_dff
   (.clk_i       (dfi_clk_1x_i)
   ,.data_i      (dfi_rddata_en_i)
@@ -234,13 +248,10 @@ module bsg_dfi_to_fifo
   assign fifo_rd_yumi_o = rd_toggle_r ^ rd_toggle_rr;
   
   logic dfi_rddata_valid_r;
-  bsg_dff_chain 
- #(.width_p     (1)
-  ,.num_stages_p(1)
-  ) rdvalid_r_dff
-  (.clk_i       (fifo_clk_i)
-  ,.data_i      (dfi_rddata_valid_o)
-  ,.data_o      (dfi_rddata_valid_r)
+  bsg_dff #(.width_p(1)) rdvalid_r_dff
+  (.clk_i (fifo_clk_i)
+  ,.data_i(dfi_rddata_valid_o)
+  ,.data_o(dfi_rddata_valid_r)
   );
   
   bsg_dff #(.width_p(1)) error_dff
