@@ -186,13 +186,14 @@ module bsg_dfi_to_fifo
   );
   
   assign dfi_rddata_o = fifo_rd_data_i;
-  assign fifo_rd_yumi_o = dfi_rddata_valid_r & (rd_toggle_rr ^ rd_toggle_rrr);
+  wire rd_clk_edge_detected = rd_toggle_rr ^ rd_toggle_rrr;
+  assign fifo_rd_yumi_o = dfi_rddata_valid_r & rd_clk_edge_detected;
   
   bsg_dff_reset_en #(.width_p(1)) error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (dfi_rddata_valid_o & ~fifo_rd_v_i)
-  ,.en_i   (rd_toggle_rr ^ rd_toggle_rrr)
+  ,.en_i   (rd_clk_edge_detected | fifo_rd_v_i)
   ,.data_o (fifo_error_o)
   );
 
