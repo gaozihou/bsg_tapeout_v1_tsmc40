@@ -93,43 +93,6 @@ module bsg_dfi_to_fifo
   ,.r_data_o (fifo_wr_data_o)
   ,.r_valid_o(fifo_wr_v_o)
   );
-  
-  assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
-  
-  logic fifo_wr_v_lo;
-  assign fifo_wr_v_o = fifo_wr_v_lo;
-  
-  logic [7:0] wr_count_r, wr_count_n;
-  always_ff @(posedge fifo_clk_i)
-  begin
-    if (fifo_reset_i)
-      begin
-        wr_count_r <= '0;
-        wr_error_r <= 1'b0;
-      end
-    else
-      begin
-        wr_count_r <= wr_count_n;
-        wr_error_r <= wr_error_n;
-      end
-  end
-  
-  always_comb
-  begin
-    wr_count_n = wr_count_r;
-    wr_error_n = wr_error_r;
-    fifo_wr_v_lo = 1'b0;
-    if (dfi_wrdata_en_i)
-      begin
-        fifo_wr_v_lo = (wr_count_r == 0);
-        wr_error_n = (wr_count_r == 0) && (~fifo_wr_ready_i);
-        wr_count_n = wr_count_r + 1;
-        if (wr_count_r == (clk_ratio_p-1))
-          begin
-            wr_count_n = 0;
-          end
-      end
-  end
 */
 
   // handle cmd
@@ -179,122 +142,59 @@ module bsg_dfi_to_fifo
   ,.r_data_o (fifo_cmd_data_o)
   ,.r_valid_o(fifo_cmd_v_o)
   );
-
-  assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
-  
-  logic fifo_cmd_v_lo;
-  assign fifo_cmd_v_o = fifo_cmd_v_lo;
-  
-  logic [7:0] cmd_count_r, cmd_count_n;
-  always_ff @(posedge fifo_clk_i)
-  begin
-    if (fifo_reset_i)
-      begin
-        cmd_count_r <= '0;
-        cmd_error_r <= 1'b0;
-      end
-    else
-      begin
-        cmd_count_r <= cmd_count_n;
-        cmd_error_r <= cmd_error_n;
-      end
-  end
-  
-  always_comb
-  begin
-    cmd_count_n = cmd_count_r;
-    cmd_error_n = cmd_error_r;
-    fifo_cmd_v_lo = 1'b0;
-    if (~dfi_cs_n_i)
-      begin
-        fifo_cmd_v_lo = (cmd_count_r == 0);
-        cmd_error_n = (cmd_count_r == 0) && (~fifo_cmd_ready_i);
-        cmd_count_n = cmd_count_r + 1;
-        if (cmd_count_r == (clk_ratio_p-1))
-          begin
-            cmd_count_n = 0;
-          end
-      end
-  end
 */
 
   // handle read data
   bsg_dff_chain 
  #(.width_p     (1)
-  ,.num_stages_p(2) // FIXED
+  ,.num_stages_p(2) // FIXED, DO NOT MODIFY
   ) rdvalid_dff
   (.clk_i       (dfi_clk_1x_i)
   ,.data_i      (dfi_rddata_en_i)
   ,.data_o      (dfi_rddata_valid_o)
   );
   
+  logic dfi_rddata_valid_r;
+  bsg_dff #(.width_p(1)) rdvalid_r_dff
+  (.clk_i (dfi_clk_1x_i)
+  ,.data_i(dfi_rddata_valid_o)
+  ,.data_o(dfi_rddata_valid_r)
+  );
+  
   logic rd_toggle_r;
-  bsg_dff_reset_en #(.width_p(1)) rd_toggle_r_dff
+  bsg_dff_reset #(.width_p(1)) rd_toggle_r_dff
   (.clk_i  (dfi_clk_1x_i)
   ,.reset_i(dfi_rst_i)
   ,.data_i (~rd_toggle_r)
-  ,.en_i   (dfi_rddata_valid_o)
   ,.data_o (rd_toggle_r)
   );
   
   logic rd_toggle_rr;
-  bsg_dff #(.width_p(1)) rd_toggle_rr_dff
+  bsg_dff_chain 
+ #(.width_p(1)
+  ,.num_stages_p(num_sync_stages_p)
+  ) rd_toggle_rr_dff
   (.clk_i  (fifo_clk_i)
   ,.data_i (rd_toggle_r)
   ,.data_o (rd_toggle_rr)
   );
   
-  assign dfi_rddata_o = fifo_rd_data_i;
-  assign fifo_rd_yumi_o = rd_toggle_r ^ rd_toggle_rr;
-  
-  logic dfi_rddata_valid_r;
-  bsg_dff #(.width_p(1)) rdvalid_r_dff
-  (.clk_i (fifo_clk_i)
-  ,.data_i(dfi_rddata_valid_o)
-  ,.data_o(dfi_rddata_valid_r)
+  logic rd_toggle_rrr;
+  bsg_dff #(.width_p(1)) rd_toggle_rrr_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (rd_toggle_rr)
+  ,.data_o (rd_toggle_rrr)
   );
   
-  bsg_dff #(.width_p(1)) error_dff
+  assign dfi_rddata_o = fifo_rd_data_i;
+  assign fifo_rd_yumi_o = dfi_rddata_valid_r & (rd_toggle_rr ^ rd_toggle_rrr);
+  
+  bsg_dff_reset_en #(.width_p(1)) error_dff
   (.clk_i  (fifo_clk_i)
-  ,.data_i (dfi_rddata_valid_r & ~fifo_rd_v_i)
+  ,.reset_i(fifo_reset_i)
+  ,.data_i (dfi_rddata_valid_o & ~fifo_rd_v_i)
+  ,.en_i   (rd_toggle_rr ^ rd_toggle_rrr)
   ,.data_o (fifo_error_o)
   );
-  
-/*  
-  logic fifo_rd_yumi_lo;
-  assign fifo_rd_yumi_o = fifo_rd_yumi_lo;
-
-  logic [7:0] rd_count_r, rd_count_n;
-  always_ff @(posedge fifo_clk_i)
-  begin
-    if (fifo_reset_i)
-      begin
-        rd_count_r <= '0;
-        rd_error_r <= 1'b0;
-      end
-    else
-      begin
-        rd_count_r <= rd_count_n;
-        rd_error_r <= rd_error_n;
-      end
-  end
-  
-  always_comb
-  begin
-    rd_count_n = rd_count_r;
-    rd_error_n = rd_error_r;
-    fifo_rd_yumi_lo = 1'b0;
-    if (dfi_rddata_valid_o)
-      begin
-        fifo_rd_yumi_lo = (rd_count_r == (clk_ratio_p-1));
-        rd_error_n = (rd_count_r == (clk_ratio_p-1)) && (~fifo_rd_v_i);
-        rd_count_n = rd_count_r + 1;
-        if (rd_count_r == (clk_ratio_p-1))
-          begin
-            rd_count_n = 0;
-          end
-      end
-  end
-*/
 
 endmodule
