@@ -72,6 +72,13 @@ module bsg_dfi_to_fifo
   );
   
   wire dfi_clk_edge_detected = dfi_toggle_rr ^ dfi_toggle_rrr;
+  
+  logic dfi_clk_edge_detected_r;
+  bsg_dff #(.width_p(1)) dfi_edge_r_dff
+  (.clk_i  (fifo_clk_i)
+  ,.data_i (dfi_clk_edge_detected)
+  ,.data_o (dfi_clk_edge_detected_r)
+  );
 
 
   // handle write data
@@ -143,11 +150,22 @@ module bsg_dfi_to_fifo
   assign dfi_rddata_o = fifo_rd_data_i;
   assign fifo_rd_yumi_o = dfi_rddata_valid_r & dfi_clk_edge_detected;
   
+  logic [num_sync_stages_p:0] fifo_rd_v_r;
+  assign fifo_rd_v_r[0] = fifo_rd_v_i;
+  for (genvar i = 0; i < num_sync_stages_p; i++)
+  begin: rd_v_r_loop
+    bsg_dff #(.width_p(1)) dff
+    (.clk_i (fifo_clk_i)
+    ,.data_i(fifo_rd_v_r[i])
+    ,.data_o(fifo_rd_v_r[i+1])
+    );
+  end
+  
   bsg_dff_reset_en #(.width_p(1)) error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (dfi_rddata_valid_o & ~fifo_rd_v_i)
-  ,.en_i   (dfi_clk_edge_detected | fifo_rd_v_i)
+  ,.en_i   (dfi_clk_edge_detected_r | (& fifo_rd_v_r))
   ,.data_o (fifo_error_o)
   );
 
