@@ -45,6 +45,11 @@ module bsg_dfi_to_fifo
   ,output                                       fifo_rd_yumi_o
   );
   
+  // handle error detection
+  logic fifo_wr_error_lo, fifo_cmd_error_lo, fifo_rd_error_lo;
+  assign fifo_error_o = fifo_wr_error_lo | fifo_cmd_error_lo | fifo_rd_error_lo;
+  
+  
   // handle dfi clock edge detection
   logic dfi_toggle_r;
   bsg_dff_reset #(.width_p(1)) dfi_toggle_r_dff
@@ -85,6 +90,13 @@ module bsg_dfi_to_fifo
   assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
   assign fifo_wr_v_o = dfi_wrdata_en_i & dfi_clk_edge_detected;
   
+  bsg_dff_reset #(.width_p(1)) wr_error_dff
+  (.clk_i  (fifo_clk_i)
+  ,.reset_i(fifo_reset_i)
+  ,.data_i (~fifo_wr_ready_i)
+  ,.data_o (fifo_wr_error_lo)
+  );
+  
 /*
   wire w_async_fifo_full_lo;
   bsg_async_fifo
@@ -108,6 +120,13 @@ module bsg_dfi_to_fifo
   // handle cmd
   assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
   assign fifo_cmd_v_o = (~dfi_cs_n_i) & dfi_clk_edge_detected;
+  
+  bsg_dff_reset #(.width_p(1)) cmd_error_dff
+  (.clk_i  (fifo_clk_i)
+  ,.reset_i(fifo_reset_i)
+  ,.data_i (~fifo_cmd_ready_i)
+  ,.data_o (fifo_cmd_error_lo)
+  );
 
 /*
   wire cmd_async_fifo_full_lo;
@@ -161,12 +180,12 @@ module bsg_dfi_to_fifo
     );
   end
   
-  bsg_dff_reset_en #(.width_p(1)) error_dff
+  bsg_dff_reset_en #(.width_p(1)) rd_error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (dfi_rddata_valid_o & ~fifo_rd_v_i)
   ,.en_i   (dfi_clk_edge_detected_r | (& fifo_rd_v_r))
-  ,.data_o (fifo_error_o)
+  ,.data_o (fifo_rd_error_lo)
   );
 
 endmodule
