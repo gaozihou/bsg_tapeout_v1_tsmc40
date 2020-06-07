@@ -68,7 +68,7 @@ module bsg_fifo_to_axi
     localparam col_els_lp = 2*1024;
     localparam col_width_lp = `BSG_SAFE_CLOG2(col_els_lp);
     localparam axi_dq_ratio_lp = axi_data_width_p/(2*dq_data_width_p);
-    localparam axi_wdata_counter_width_lp = `BSG_SAFE_CLOG2(16*dq_data_width_p/axi_data_width_p);
+    localparam axi_wdata_counter_width_lp = `BSG_SAFE_CLOG2(16*dq_data_width_p/axi_data_width_p+1);
 
     // Command
     logic                         cmd_v_lo;
@@ -131,7 +131,7 @@ module bsg_fifo_to_axi
                     bank_row_sel = 0;
                     axi_awvalid_o = 0;
                     mode_change = 0;
-                    cmd_yumi_li = axi_awready_i;
+                    cmd_yumi_li = axi_arready_i;
                 end
                 4'b0100: begin
                     // write burst
@@ -141,14 +141,14 @@ module bsg_fifo_to_axi
                     bank_row_sel = 0;
                     axi_arvalid_o = 0;
                     mode_change = 0;
-                    cmd_yumi_li = axi_arready_i;
+                    cmd_yumi_li = axi_awready_i;
                 end
                 4'b0000: begin
                     // load mode register
                     bank_row_sel = 0;
                     axi_arvalid_o = 0;
                     axi_awvalid_o = 0;
-                    mode_change = 1;
+                    mode_change = (bank[1:0] == 2'b00);
                     cmd_yumi_li = 1;
                 end
                 default: begin
@@ -195,6 +195,7 @@ module bsg_fifo_to_axi
     logic wr_yumi_li;
     logic wrdata_v_lo, wrmask_v_lo;
     logic wrdata_ready_lo, wrmask_ready_lo;
+    logic [2*dq_group_lp] axi_wmask_lo;
     logic [axi_data_width_p+axi_dq_ratio_lp*dq_group_lp-1:0] wr_data_lo;
     logic [axi_wdata_counter_width_lp-1:0] axi_wdata_counter_r;
     logic [axi_wdata_counter_width_lp-1:0] axi_wdata_len;
@@ -227,10 +228,11 @@ module bsg_fifo_to_axi
      ,.data_i (fifo_wr_data_i[0+:2*dq_group_lp])
      ,.v_i    (fifo_wr_v_i) 
      ,.v_o    (wrmask_v_lo) 
-     ,.data_o (axi_wstrb_o) 
+     ,.data_o (axi_wmask_lo) 
      ,.yumi_i (wr_yumi_li) 
     );
 
+    assign axi_wstrb_o = ~axi_wmask_lo;
     assign fifo_wr_ready_o = wrdata_ready_lo & wrmask_ready_lo;
     assign wr_yumi_li = wrdata_v_lo & axi_wready_i;
     assign axi_wvalid_o = wrdata_v_lo & wrmask_v_lo;
