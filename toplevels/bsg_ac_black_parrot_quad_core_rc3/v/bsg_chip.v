@@ -595,9 +595,9 @@ module bsg_chip
   localparam axi_id_width_p = 6;
   localparam axi_addr_width_p = 64;
   localparam axi_data_width_p = 256;
-  localparam axi_burst_len_p = 1;
-  localparam axi_mem_els_p = 4194304; // 2 Gb
-  localparam axi_strb_width_lp = axi_data_width_p>>3;
+  localparam axi_burst_len_p = 2;
+  localparam axi_mem_els_p = 16777216; // 2 * 2 Gb
+  localparam axi_strb_width_lp = axi_data_width_p >> 3;
 
   wire                              app_en_lo;
   wire                              app_rdy_li;

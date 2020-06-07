@@ -109,9 +109,9 @@ module bsg_fifo_to_axi
     logic     [row_width_lp-1:0] row;
     logic [axi_addr_width_p-1:0] axi_addr;
 
-    assign axi_addr = bank[1:0] * row_els_lp * col_els_lp +
+    assign axi_addr = (bank[1:0] * row_els_lp * col_els_lp +
                       row * col_els_lp +
-                      {address[11], address[9:0]}; // byte
+                      {address[11], address[9:0]}) << 2; // byte
     always_comb begin
         if (cmd_v_lo) begin
             case ({cs_n, ras_n, cas_n, we_n})
