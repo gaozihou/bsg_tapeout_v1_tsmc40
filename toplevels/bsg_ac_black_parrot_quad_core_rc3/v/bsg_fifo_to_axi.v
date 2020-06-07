@@ -113,14 +113,21 @@ module bsg_fifo_to_axi
                       row * col_els_lp +
                       {address[11], address[9:0]}) << 2; // byte
     always_comb begin
+        bank_row_sel = 0;
+        bank_row_sel = 0;
+        axi_arvalid_o = 0;
+        axi_awvalid_o = 0;
+        mode_change = 0;
+        cmd_yumi_li = 0;
+        axi_awaddr_o = 0;
+        axi_awid_o = 0;
+        axi_araddr_o = 0;
+        axi_arid_o = 0;
         if (cmd_v_lo) begin
             case ({cs_n, ras_n, cas_n, we_n})
                 4'b0011: begin
                     // select bank and activate row
                     bank_row_sel = 1;
-                    axi_arvalid_o = 0;
-                    axi_awvalid_o = 0;
-                    mode_change = 0;
                     cmd_yumi_li = 1;
                 end
                 4'b0101: begin
@@ -128,9 +135,6 @@ module bsg_fifo_to_axi
                     axi_arvalid_o = 1;
                     axi_araddr_o = axi_addr;
                     axi_arid_o = 0; // ignore now
-                    bank_row_sel = 0;
-                    axi_awvalid_o = 0;
-                    mode_change = 0;
                     cmd_yumi_li = axi_arready_i;
                 end
                 4'b0100: begin
@@ -138,16 +142,10 @@ module bsg_fifo_to_axi
                     axi_awvalid_o = 1;
                     axi_awaddr_o = axi_addr;
                     axi_awid_o = 0; // ignore now
-                    bank_row_sel = 0;
-                    axi_arvalid_o = 0;
-                    mode_change = 0;
                     cmd_yumi_li = axi_awready_i;
                 end
                 4'b0000: begin
                     // load mode register
-                    bank_row_sel = 0;
-                    axi_arvalid_o = 0;
-                    axi_awvalid_o = 0;
                     mode_change = (bank[1:0] == 2'b00);
                     cmd_yumi_li = 1;
                 end
@@ -159,13 +157,6 @@ module bsg_fifo_to_axi
                     cmd_yumi_li = 1;
                 end
             endcase
-        end
-        else begin
-            bank_row_sel = 0;
-            axi_arvalid_o = 0;
-            axi_awvalid_o = 0;
-            mode_change = 0;
-            cmd_yumi_li = 0;
         end
     end
 
@@ -180,14 +171,21 @@ module bsg_fifo_to_axi
     logic [2:0] mode_cas_latency; // 3'b010: 2
                                   // 3'b011: 3
     always_ff @(posedge clk_i) begin
-        if (bank_row_sel) begin
-            row <= address[0+:row_width_lp];
+        if (reset_i) begin
+            row <= 0;
+            mode_burst_len <= 0;
+            mode_burst_type <= 0;
+            mode_cas_latency <= 0;
         end
-
-        if (mode_change) begin
-            mode_burst_len <= address[2:0];
-            mode_burst_type <= address[3];
-            mode_cas_latency <= address[6:4];
+        else begin
+            if (bank_row_sel) begin
+                row <= address[0+:row_width_lp];
+            end
+            if (mode_change) begin
+                mode_burst_len <= address[2:0];
+                mode_burst_type <= address[3];
+                mode_cas_latency <= address[6:4];
+            end
         end
     end
 
@@ -267,15 +265,20 @@ module bsg_fifo_to_axi
     end
 
     always_ff @(posedge clk_i) begin
-        if (mode_change & (mode_burst_len !== address[2:0] )) begin
+        if (reset_i) begin
             axi_wdata_counter_r <= 0;
         end
         else begin
-            if (axi_wvalid_o & wr_yumi_li) begin
-                if (axi_wdata_counter_r + 1 == axi_wdata_len) 
-                    axi_wdata_counter_r <= 0;
-                else
-                    axi_wdata_counter_r <= axi_wdata_counter_r + 1;
+            if (mode_change & (mode_burst_len !== address[2:0] )) begin
+                axi_wdata_counter_r <= 0;
+            end
+            else begin
+                if (axi_wvalid_o & wr_yumi_li) begin
+                    if (axi_wdata_counter_r + 1 == axi_wdata_len) 
+                        axi_wdata_counter_r <= 0;
+                    else
+                        axi_wdata_counter_r <= axi_wdata_counter_r + 1;
+                end
             end
         end
     end
