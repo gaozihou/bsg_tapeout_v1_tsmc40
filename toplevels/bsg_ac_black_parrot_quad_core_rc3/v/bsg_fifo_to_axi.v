@@ -195,7 +195,7 @@ module bsg_fifo_to_axi
     logic wr_yumi_li;
     logic wrdata_v_lo, wrmask_v_lo;
     logic wrdata_ready_lo, wrmask_ready_lo;
-    logic [2*dq_group_lp-1:0] axi_wmask_lo;
+    logic [2*dq_group_lp*axi_dq_ratio_lp-1:0] axi_wmask_lo;
     logic [axi_data_width_p+axi_dq_ratio_lp*dq_group_lp-1:0] wr_data_lo;
     logic [axi_wdata_counter_width_lp-1:0] axi_wdata_counter_r;
     logic [axi_wdata_counter_width_lp-1:0] axi_wdata_len;
