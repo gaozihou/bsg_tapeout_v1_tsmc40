@@ -267,12 +267,15 @@ module bsg_fifo_to_axi
     end
 
     always_ff @(posedge clk_i) begin
-        if (axi_awvalid_o & axi_awready_i) begin
+        if (mode_change & (mode_burst_len !== address[2:0] )) begin
             axi_wdata_counter_r <= 0;
         end
         else begin
             if (axi_wvalid_o & wr_yumi_li) begin
-                axi_wdata_counter_r <= axi_wdata_counter_r + 1;
+                if (axi_wdata_counter_r + 1 == axi_wdata_len) 
+                    axi_wdata_counter_r <= 0;
+                else
+                    axi_wdata_counter_r <= axi_wdata_counter_r + 1;
             end
         end
     end
