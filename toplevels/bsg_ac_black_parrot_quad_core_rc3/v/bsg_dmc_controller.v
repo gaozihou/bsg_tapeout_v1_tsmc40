@@ -176,6 +176,7 @@ module bsg_dmc_controller
   logic [27:0] ldst_cmd;
 
   logic  [3:0] tbl;
+  logic  [3:0] tbl_decoded;
 
   logic [15:0] tick_refi;
   logic  [3:0] tick_mrd;
@@ -196,6 +197,7 @@ module bsg_dmc_controller
   assign app_sr_active_o = app_sr_req_i;
 
   assign tbl = 4'($clog2(dfi_burst_length_lp << 1));
+  assign tbl_decoded = dfi_burst_length_lp - 1;
 
   assign app_rdy_o = ~cmd_afifo_wfull;
 
@@ -479,13 +481,13 @@ module bsg_dmc_controller
 	ACT:   case(n_cmd)
                  PRE:     shoot = cmd_tick >= dmc_p_i.tras;
                  ACT:     shoot = cmd_tick >= dmc_p_i.trrd;
-                 WRITE:   shoot = (cmd_tick >= dmc_p_i.trcd) & (cmd_rd_tick >= dmc_p_i.tcas+tbl) & (&tx_sipo_valid_lo);
+                 WRITE:   shoot = (cmd_tick >= dmc_p_i.trcd) & (cmd_rd_tick >= dmc_p_i.tcas+tbl_decoded) & (&tx_sipo_valid_lo);
                  READ:    shoot = (cmd_tick >= dmc_p_i.trcd) & (cmd_wr_tick >= dmc_p_i.twtr);
 	         default: shoot = 1'b1;
                endcase
         WRITE: case(n_cmd)
                  PRE:     shoot = (cmd_tick >= dmc_p_i.twr) & (cmd_act_tick >= dmc_p_i.tras);
-                 WRITE:   shoot = (cmd_tick >= tbl) & (&tx_sipo_valid_lo);
+                 WRITE:   shoot = (cmd_tick >= tbl_decoded) & (&tx_sipo_valid_lo);
                  READ:    shoot = cmd_tick >= dmc_p_i.twtr;
                  //ACT:     shoot = cmd_act_tick >= dmc_p_i.trc;
                  ACT:     shoot = (cmd_act_tick >= dmc_p_i.trc) & (cmd_tick >= dmc_p_i.twr + dmc_p_i.trp);
@@ -493,8 +495,8 @@ module bsg_dmc_controller
                endcase
         READ:  case(n_cmd)
                  PRE:     shoot = (cmd_tick >= dmc_p_i.trtp) & (cmd_act_tick >= dmc_p_i.tras);
-                 WRITE:   shoot = (cmd_tick >= tbl+dmc_p_i.tcas) & (&tx_sipo_valid_lo);
-                 READ:    shoot = cmd_tick >= tbl;
+                 WRITE:   shoot = (cmd_tick >= tbl_decoded+dmc_p_i.tcas) & (&tx_sipo_valid_lo);
+                 READ:    shoot = cmd_tick >= tbl_decoded;
                  //ACT:     shoot = cmd_act_tick >= dmc_p_i.trc;
                  ACT:     shoot = (cmd_act_tick >= dmc_p_i.trc) & (cmd_tick >= dmc_p_i.trtp + dmc_p_i.trp);
 	         default: shoot = 1'b1;
