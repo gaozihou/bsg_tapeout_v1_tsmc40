@@ -40,6 +40,12 @@ module bsg_fifo_to_axi
     , output logic [axi_strb_width_lp-1:0] axi_wstrb_o
     , output logic axi_wlast_o
     , output logic axi_wvalid_o
+    , output logic [7:0] axi_awlen_o
+    , output logic [2:0] axi_awsize_o
+    , output logic [1:0] axi_awburst_o
+    , output logic [3:0] axi_awcache_o
+    , output logic [1:0] axi_awprot_o
+    , output logic axi_awlock_o
 
     // write response
     , input [axi_id_width_p-1:0] axi_bid_i
@@ -52,6 +58,12 @@ module bsg_fifo_to_axi
     , output logic [axi_id_width_p-1:0] axi_arid_o
     , output logic [axi_addr_width_p-1:0] axi_araddr_o
     , output logic axi_arvalid_o
+    , output logic [7:0] axi_arlen_o
+    , output logic [2:0] axi_arsize_o
+    , output logic [1:0] axi_arburst_o
+    , output logic [3:0] axi_arcache_o
+    , output logic [1:0] axi_arprot_o
+    , output logic axi_arlock_o
 
     // read data
     , input [axi_id_width_p-1:0] axi_rid_i
@@ -159,6 +171,19 @@ module bsg_fifo_to_axi
             endcase
         end
     end
+
+    assign axi_awlen_o = (8)'(axi_burst_len_p - 1); // burst len
+    assign axi_awsize_o = (3)'(`BSG_SAFE_CLOG2(axi_data_width_p >> 3));
+    assign axi_awburst_o = 2'b01;   // incr
+    assign axi_awcache_o = 4'b0000; // non-bufferable
+    assign axi_awprot_o = 2'b00;    // unprivileged
+    assign axi_awlock_o = 1'b0;    // normal access
+    assign axi_arlen_o = (8)'(axi_burst_len_p - 1); // burst length
+    assign axi_arsize_o = (3)'(`BSG_SAFE_CLOG2(axi_data_width_p >> 3));
+    assign axi_arburst_o = 2'b01;   // incr
+    assign axi_arcache_o = 4'b0000; // non-bufferable
+    assign axi_arprot_o = 2'b00;    // unprevileged
+    assign axi_arlock_o = 1'b0;    // normal access
 
     // Statndard mode register
     // Currently we only support sequential mode

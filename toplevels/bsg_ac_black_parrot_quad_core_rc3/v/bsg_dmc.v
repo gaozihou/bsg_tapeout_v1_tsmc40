@@ -89,6 +89,12 @@ module bsg_dmc
   ,output       [axi_id_width_p-1:0] axi_awid_o
   ,output     [axi_addr_width_p-1:0] axi_awaddr_o
   ,output                            axi_awvalid_o
+  ,output                      [7:0] axi_awlen_o
+  ,output                      [2:0] axi_awsize_o
+  ,output                      [1:0] axi_awburst_o
+  ,output                      [3:0] axi_awcache_o
+  ,output                      [1:0] axi_awprot_o
+  ,output                            axi_awlock_o
   // write data
   ,input                             axi_wready_i
   ,output     [axi_data_width_p-1:0] axi_wdata_o
@@ -105,6 +111,13 @@ module bsg_dmc
   ,output       [axi_id_width_p-1:0] axi_arid_o
   ,output     [axi_addr_width_p-1:0] axi_araddr_o
   ,output                            axi_arvalid_o
+  ,output                      [7:0] axi_arlen_o
+  ,output                      [2:0] axi_arsize_o
+  ,output                      [1:0] axi_arburst_o
+  ,output                      [3:0] axi_arcache_o
+  ,output                      [1:0] axi_arprot_o
+  ,output                            axi_arlock_o
+  // write data
   // read data
   ,input        [axi_id_width_p-1:0] axi_rid_i
   ,input      [axi_data_width_p-1:0] axi_rdata_i
@@ -350,6 +363,12 @@ module bsg_dmc
   ,.axi_awid_o
   ,.axi_awaddr_o
   ,.axi_awvalid_o
+  ,.axi_awlen_o
+  ,.axi_awsize_o
+  ,.axi_awburst_o
+  ,.axi_awcache_o
+  ,.axi_awprot_o
+  ,.axi_awlock_o
   ,.axi_wready_i
   ,.axi_wdata_o
   ,.axi_wstrb_o
@@ -363,6 +382,12 @@ module bsg_dmc
   ,.axi_arid_o
   ,.axi_araddr_o
   ,.axi_arvalid_o
+  ,.axi_arlen_o
+  ,.axi_arsize_o
+  ,.axi_arburst_o
+  ,.axi_arcache_o
+  ,.axi_arprot_o
+  ,.axi_arlock_o
   ,.axi_rid_i
   ,.axi_rdata_i
   ,.axi_rresp_i
