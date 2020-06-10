@@ -784,7 +784,6 @@ module bsg_chip
     ,.ui_data_width_p       ( cce_block_width_p   )
     ,.burst_data_width_p    ( cce_block_width_p   )
     ,.dq_data_width_p       ( dmc_data_width_gp   )
-    ,.clk_ratio_p           ( clk_ratio_p         )
     ,.axi_id_width_p        ( axi_id_width_p      )
     ,.axi_addr_width_p      ( axi_addr_width_p    )
     ,.axi_data_width_p      ( axi_data_width_p    )

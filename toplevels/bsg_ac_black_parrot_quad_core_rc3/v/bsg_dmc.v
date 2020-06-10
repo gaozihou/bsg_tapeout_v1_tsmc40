@@ -6,7 +6,6 @@ module bsg_dmc
   ,parameter  ui_data_width_p    = "inv"
   ,parameter  burst_data_width_p = "inv"
   ,parameter  dq_data_width_p    = "inv"
-  ,parameter  clk_ratio_p        = "inv"
   ,parameter  axi_id_width_p     = "inv"
   ,parameter  axi_addr_width_p   = "inv"
   ,parameter  axi_data_width_p   = "inv"
@@ -299,8 +298,7 @@ module bsg_dmc
     
     
   bsg_dfi_to_fifo 
- #(.clk_ratio_p    (clk_ratio_p)
-  ,.dq_data_width_p(dq_data_width_p)
+ #(.dq_data_width_p(dq_data_width_p)
   ) dfi_to_fifo
   // DDR PHY interface clock and reset
   (.dfi_clk_1x_i        ( dfi_clk_1x_lo       )

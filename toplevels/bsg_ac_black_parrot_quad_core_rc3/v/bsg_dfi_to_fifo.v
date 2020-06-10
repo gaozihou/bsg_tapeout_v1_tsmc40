@@ -1,8 +1,7 @@
 
 module bsg_dfi_to_fifo 
 
- #(parameter  clk_ratio_p     = "inv"
-  ,parameter  dq_data_width_p = "inv"
+ #(parameter  dq_data_width_p = "inv"
   ,parameter  num_sync_stages_p = 2
   ,localparam dq_group_lp     = dq_data_width_p >> 3
   )
@@ -90,63 +89,26 @@ module bsg_dfi_to_fifo
   assign fifo_wr_data_o = {dfi_wrdata_i, dfi_wrdata_mask_i};
   assign fifo_wr_v_o = dfi_wrdata_en_i & dfi_clk_edge_detected;
   
+  // write error monitor
   bsg_dff_reset #(.width_p(1)) wr_error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (~fifo_wr_ready_i)
   ,.data_o (fifo_wr_error_lo)
   );
-  
-/*
-  wire w_async_fifo_full_lo;
-  bsg_async_fifo
- #(.lg_size_p(3)
-  ,.width_p  (2*dq_data_width_p+2*dq_group_lp)
-  ) w_async_fifo
-  (.w_clk_i  (dfi_clk_1x_i)
-  ,.w_reset_i(dfi_rst_i)
-  ,.w_enq_i  (dfi_wrdata_en_i)
-  ,.w_data_i ({dfi_wrdata_i, dfi_wrdata_mask_i})
-  ,.w_full_o (w_async_fifo_full_lo)
 
-  ,.r_clk_i  (fifo_clk_i)
-  ,.r_reset_i(fifo_reset_i)
-  ,.r_deq_i  (fifo_wr_v_o & fifo_wr_ready_i)
-  ,.r_data_o (fifo_wr_data_o)
-  ,.r_valid_o(fifo_wr_v_o)
-  );
-*/
 
   // handle cmd
   assign fifo_cmd_data_o = {dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i};
   assign fifo_cmd_v_o = (~dfi_cs_n_i) & dfi_clk_edge_detected;
   
+  // cmd error monitor
   bsg_dff_reset #(.width_p(1)) cmd_error_dff
   (.clk_i  (fifo_clk_i)
   ,.reset_i(fifo_reset_i)
   ,.data_i (~fifo_cmd_ready_i)
   ,.data_o (fifo_cmd_error_lo)
   );
-
-/*
-  wire cmd_async_fifo_full_lo;
-  bsg_async_fifo
- #(.lg_size_p(3)
-  ,.width_p  (3+16+7)
-  ) cmd_async_fifo
-  (.w_clk_i  (dfi_clk_1x_i)
-  ,.w_reset_i(dfi_rst_i)
-  ,.w_enq_i  (~dfi_cs_n_i)
-  ,.w_data_i ({dfi_bank_i, dfi_address_i, dfi_cke_i, dfi_cs_n_i, dfi_ras_n_i, dfi_cas_n_i, dfi_we_n_i, dfi_reset_n_i, dfi_odt_i})
-  ,.w_full_o (cmd_async_fifo_full_lo)
-
-  ,.r_clk_i  (fifo_clk_i)
-  ,.r_reset_i(fifo_reset_i)
-  ,.r_deq_i  (fifo_cmd_v_o & fifo_cmd_ready_i)
-  ,.r_data_o (fifo_cmd_data_o)
-  ,.r_valid_o(fifo_cmd_v_o)
-  );
-*/
 
 
   // handle read data
@@ -169,6 +131,7 @@ module bsg_dfi_to_fifo
   assign dfi_rddata_o = fifo_rd_data_i;
   assign fifo_rd_yumi_o = dfi_rddata_valid_r & dfi_clk_edge_detected;
   
+  // read error monitor
   logic [num_sync_stages_p:0] fifo_rd_v_r;
   assign fifo_rd_v_r[0] = fifo_rd_v_i;
   for (genvar i = 0; i < num_sync_stages_p; i++)
