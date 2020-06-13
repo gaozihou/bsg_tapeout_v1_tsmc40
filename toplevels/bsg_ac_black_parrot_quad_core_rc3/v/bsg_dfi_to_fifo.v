@@ -16,6 +16,9 @@
 module bsg_dfi_to_fifo 
 
  #(parameter  dq_data_width_p   = "inv"
+  // set PHY's read latency (defined by PHY)
+  // rddata_valid_o is asserted phy_rdlat_p cycles after rddata_en_i asserted
+  ,parameter  phy_rdlat_p       = "inv"
   // set number of sync flops for clock domain crossing
   ,parameter  num_sync_stages_p = 2
   ,localparam dq_group_lp       = dq_data_width_p >> 3
@@ -159,11 +162,11 @@ module bsg_dfi_to_fifo
 
   // handle read data
   // 
-  // Read data should appear on dfi interface 2 cycles after rddata_en is
-  // asserted, use this dff_chain to generate rddata_valid signal
+  // Read data should appear on dfi interface phy_rdlat_p cycles after 
+  // rddata_en is asserted, use this dff_chain to generate rddata_valid signal
   bsg_dff_chain 
  #(.width_p     (1)
-  ,.num_stages_p(2) // FIXED, DO NOT MODIFY
+  ,.num_stages_p(phy_rdlat_p)
   ) rdvalid_dff
   (.clk_i       (dfi_clk_1x_i)
   ,.data_i      (dfi_rddata_en_i)

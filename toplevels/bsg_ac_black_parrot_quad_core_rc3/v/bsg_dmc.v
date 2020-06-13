@@ -299,6 +299,7 @@ module bsg_dmc
     
   bsg_dfi_to_fifo 
  #(.dq_data_width_p(dq_data_width_p)
+  ,.phy_rdlat_p    (2)
   ) dfi_to_fifo
   // DDR PHY interface clock and reset
   (.dfi_clk_1x_i        ( dfi_clk_1x_lo       )
