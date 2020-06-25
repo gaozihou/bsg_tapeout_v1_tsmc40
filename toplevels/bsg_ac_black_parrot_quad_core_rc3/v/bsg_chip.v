@@ -737,7 +737,7 @@ module bsg_chip
   parameter clk_ratio_p = 12;
   parameter clk_period_p = 3000;
   
-  logic axi_clk_lo, dfi_2x_clk_lo;
+  logic axi_clk_lo, dfi_clk_1x_lo;
   bsg_nonsynth_clock_gen
  #(.cycle_time_p(clk_period_p)
   ) dmc_clkgen
@@ -764,8 +764,8 @@ module bsg_chip
   ) dmc_ds
   (.clk_i  (axi_clk_lo)
   ,.reset_i(ds_reset_lo)
-  ,.val_i  (clk_ratio_p/4-1)
-  ,.clk_r_o(dfi_2x_clk_lo)
+  ,.val_i  (clk_ratio_p/2-1)
+  ,.clk_r_o(dfi_clk_1x_lo)
   );
   
   logic axi_reset_lo;
@@ -778,7 +778,7 @@ module bsg_chip
   );
   
 
-  bsg_dmc #
+  bsg_dmc_emulator #
     (.num_adgs_p            ( clk_gen_num_adgs_gp )
     ,.ui_addr_width_p       ( dmc_addr_width_gp   )
     ,.ui_data_width_p       ( cce_block_width_p   )
@@ -787,15 +787,9 @@ module bsg_chip
     ,.axi_id_width_p        ( axi_id_width_p      )
     ,.axi_addr_width_p      ( axi_addr_width_p    )
     ,.axi_data_width_p      ( axi_data_width_p    )
-    ,.axi_burst_len_p       ( axi_burst_len_p    ))
+    ,.axi_burst_len_p       ( axi_burst_len_p     ))
   dmc
-    (.async_reset_tag_i     ( dmc_reset_tag_lines_lo       )
-    ,.bsg_dly_tag_i         ( dmc_dly_tag_lines_lo         )
-    ,.bsg_dly_trigger_tag_i ( dmc_dly_trigger_tag_lines_lo )
-    ,.bsg_ds_tag_i          ( dmc_ds_tag_lines_lo          )
-
-    ,.dmc_p_i               ( dmc_p                        )
-
+    (.dmc_p_i               ( dmc_p                )
     ,.sys_reset_i           ( dmc_sys_reset_li     )
 
     // Application interface
@@ -824,46 +818,19 @@ module bsg_chip
 
     ,.init_calib_complete_o ()
 
-    ,.ddr_ck_p_o            ( ddr_ck_p_o_int       )
-    ,.ddr_ck_n_o            ( ddr_ck_n_o_int       )
-    ,.ddr_cke_o             ( ddr_cke_o_int        )
-    ,.ddr_ba_o              ( ddr_ba_lo            )
-    ,.ddr_addr_o            ( ddr_addr_lo          )
-    ,.ddr_cs_n_o            ( ddr_cs_n_o_int       )
-    ,.ddr_ras_n_o           ( ddr_ras_n_o_int      )
-    ,.ddr_cas_n_o           ( ddr_cas_n_o_int      )
-    ,.ddr_we_n_o            ( ddr_we_n_o_int       )
-    ,.ddr_reset_n_o         ( ddr_reset_n_o_int    )
-    ,.ddr_odt_o             ( ddr_odt_o_int        )
-
-    ,.ddr_dm_oen_o          ( ddr_dm_oen_lo        )
-    ,.ddr_dm_o              ( ddr_dm_lo            )
-    ,.ddr_dqs_p_oen_o       ( ddr_dqs_p_oen_lo     )
-    ,.ddr_dqs_p_ien_o       ( ddr_dqs_p_ien_lo     )
-    ,.ddr_dqs_p_o           ( ddr_dqs_p_lo         )
-    ,.ddr_dqs_p_i           ( ddr_dqs_p_li         )
-    ,.ddr_dqs_n_oen_o       ( ddr_dqs_n_oen_lo     )
-    ,.ddr_dqs_n_ien_o       ( ddr_dqs_n_ien_lo     )
-    ,.ddr_dqs_n_o           ( ddr_dqs_n_lo         )
-    ,.ddr_dqs_n_i           ( ddr_dqs_n_li         )
-    ,.ddr_dq_oen_o          ( ddr_dq_oen_lo        )
-    ,.ddr_dq_o              ( ddr_dq_lo            )
-    ,.ddr_dq_i              ( ddr_dq_li            )
-
     ,.ui_clk_i              ( router_clk_lo        )
-    ,.dfi_clk_2x_i          ( dfi_2x_clk_lo        )
-    ,.dfi_clk_1x_o          ( dfi_clk_1x_lo        )
-
-    ,.ui_clk_sync_rst_o     (                      )
+    ,.dfi_clk_1x_i          ( dfi_clk_1x_lo        )
 
     ,.device_temp_o         (                      )
     
     ,.axi_clk_i             ( axi_clk_lo           )
     ,.axi_reset_i           ( axi_reset_lo         )
+    ,.axi_fifo_error_o      (                      )
+
     ,.axi_awready_i         ( axi_awready          )
     ,.axi_awid_o            ( axi_awid             )
     ,.axi_awaddr_o          ( axi_awaddr           )
-    ,.axi_awvalid_o         ( axi_awvalid           )
+    ,.axi_awvalid_o         ( axi_awvalid          )
     ,.axi_awlen_o           (                      )
     ,.axi_awsize_o          (                      )
     ,.axi_awburst_o         (                      )

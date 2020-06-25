@@ -1,5 +1,4 @@
-module bsg_dmc
-  import bsg_tag_pkg::bsg_tag_s;
+module bsg_dmc_emulator
   import bsg_dmc_pkg::bsg_dmc_s;
  #(parameter  num_adgs_p         = 1
   ,parameter  ui_addr_width_p    = "inv"
@@ -15,14 +14,8 @@ module bsg_dmc
   ,localparam dfi_mask_width_lp  = (dq_data_width_p >> 3) << 1
   ,localparam axi_strb_width_lp  = axi_data_width_p>>3
   ,localparam dq_group_lp        = dq_data_width_p >> 3)
-  // Tag lines
-  (input bsg_tag_s                   async_reset_tag_i
-  ,input bsg_tag_s [dq_group_lp-1:0] bsg_dly_tag_i
-  ,input bsg_tag_s [dq_group_lp-1:0] bsg_dly_trigger_tag_i
-  ,input bsg_tag_s                   bsg_ds_tag_i
-  // 
-  ,input bsg_dmc_s                   dmc_p_i
-  //
+
+  (input bsg_dmc_s                   dmc_p_i
   ,input                             sys_reset_i
   // User interface signals
   ,input       [ui_addr_width_p-1:0] app_addr_i
@@ -46,44 +39,16 @@ module bsg_dmc
   ,output                            app_sr_active_o
   // Status signal
   ,output                            init_calib_complete_o
-  // DDR interface signals
-  // Command and Address interface
-  ,output                            ddr_ck_p_o
-  ,output                            ddr_ck_n_o
-  ,output                            ddr_cke_o
-  ,output                      [2:0] ddr_ba_o
-  ,output                     [15:0] ddr_addr_o
-  ,output                            ddr_cs_n_o
-  ,output                            ddr_ras_n_o
-  ,output                            ddr_cas_n_o
-  ,output                            ddr_we_n_o
-  ,output                            ddr_reset_n_o
-  ,output                            ddr_odt_o
-  // Data interface
-  ,output          [dq_group_lp-1:0] ddr_dm_oen_o
-  ,output          [dq_group_lp-1:0] ddr_dm_o
-  ,output          [dq_group_lp-1:0] ddr_dqs_p_oen_o
-  ,output          [dq_group_lp-1:0] ddr_dqs_p_ien_o
-  ,output          [dq_group_lp-1:0] ddr_dqs_p_o
-  ,input           [dq_group_lp-1:0] ddr_dqs_p_i
-  ,output          [dq_group_lp-1:0] ddr_dqs_n_oen_o
-  ,output          [dq_group_lp-1:0] ddr_dqs_n_ien_o
-  ,output          [dq_group_lp-1:0] ddr_dqs_n_o
-  ,input           [dq_group_lp-1:0] ddr_dqs_n_i
-  ,output      [dq_data_width_p-1:0] ddr_dq_oen_o
-  ,output      [dq_data_width_p-1:0] ddr_dq_o
-  ,input       [dq_data_width_p-1:0] ddr_dq_i
   // Clock interface signals
   ,input                             ui_clk_i
-  ,input                             dfi_clk_2x_i
-  ,output                            dfi_clk_1x_o
-  //
-  ,output                            ui_clk_sync_rst_o
+  ,input                             dfi_clk_1x_i
   // Reserved to be compatible with Xilinx IPs
   ,output                     [11:0] device_temp_o
   // AXI interface 
   ,input                             axi_clk_i
   ,input                             axi_reset_i
+  ,output                            axi_fifo_error_o
+  
   ,input                             axi_awready_i
   ,output       [axi_id_width_p-1:0] axi_awid_o
   ,output     [axi_addr_width_p-1:0] axi_awaddr_o
@@ -126,9 +91,6 @@ module bsg_dmc
   ,output                            axi_rready_o
 );
 
-  wire                               dfi_clk_1x_lo;
-
-  wire                               sys_reset;
   wire                               ui_reset;
   wire                               dfi_reset;
 
@@ -148,9 +110,6 @@ module bsg_dmc
   wire       [dfi_data_width_lp-1:0] dfi_rddata;
   wire                               dfi_rddata_valid;
 
-  wire             [dq_group_lp-1:0] dqs_p_li;
-
-  wire                                       fifo_error;
   wire                                       fifo_wr_v;
   wire [2*dq_data_width_p+2*dq_group_lp-1:0] fifo_wr_data;
   wire                                       fifo_wr_ready;
@@ -163,33 +122,13 @@ module bsg_dmc
 
   assign device_temp_o = 12'd0;
 
-  bsg_dmc_clk_rst_gen #
-    (.num_adgs_p  ( num_adgs_p  )
-    ,.num_lines_p ( dq_group_lp ))
-  dmc_clk_rst_gen
-    // tag lines
-    (.async_reset_tag_i     ( async_reset_tag_i     )
-    ,.bsg_dly_tag_i         ( bsg_dly_tag_i         )
-    ,.bsg_dly_trigger_tag_i ( bsg_dly_trigger_tag_i )
-    ,.bsg_ds_tag_i          ( bsg_ds_tag_i          )
-
-    ,.async_reset_o         ( sys_reset             )
-
-    ,.clk_i                 ( ddr_dqs_p_i           )
-    ,.clk_o                 ( dqs_p_li              )
-
-    ,.clk_2x_i              ( dfi_clk_2x_i          )
-    ,.clk_1x_o              ( dfi_clk_1x_lo         ));
-
-  assign dfi_clk_1x_o = dfi_clk_1x_lo;
-
   bsg_sync_sync #(.width_p(1)) ui_reset_inst
     (.oclk_i      ( ui_clk_i    )
     ,.iclk_data_i ( sys_reset_i )
     ,.oclk_data_o ( ui_reset    ));
 
   bsg_sync_sync #(.width_p(1)) dfi_reset_inst
-    (.oclk_i      ( dfi_clk_1x_lo   )
+    (.oclk_i      ( dfi_clk_1x_i   )
     ,.iclk_data_i ( sys_reset_i     )
     ,.oclk_data_o ( dfi_reset       ));
 
@@ -224,7 +163,7 @@ module bsg_dmc
     ,.app_sr_req_i          ( app_sr_req_i          )
     ,.app_sr_active_o       ( app_sr_active_o       )
     // DDR PHY interface clock and reset
-    ,.dfi_clk_i             ( dfi_clk_1x_lo         )
+    ,.dfi_clk_i             ( dfi_clk_1x_i          )
     ,.dfi_clk_sync_rst_i    ( dfi_reset             )
     // DDR PHY interface signals
     ,.dfi_bank_o            ( dfi_bank              )
@@ -246,64 +185,14 @@ module bsg_dmc
     ,.dmc_p_i               ( dmc_p_i               )
     //
     ,.init_calib_complete_o ( init_calib_complete_o ));
-
-  bsg_dmc_phy #(.dq_data_width_p(dq_data_width_p)) dmc_phy
-    // DDR PHY interface clock and reset
-    (.dfi_clk_1x_i        ( dfi_clk_1x_lo       )
-    ,.dfi_clk_2x_i        ( dfi_clk_2x_i        )
-    ,.dfi_rst_i           ( dfi_reset           )
-    // DFI interface signals
-    ,.dfi_bank_i          ( dfi_bank            )
-    ,.dfi_address_i       ( dfi_address         )
-    ,.dfi_cke_i           ( dfi_cke             )
-    ,.dfi_cs_n_i          ( dfi_cs_n            )
-    ,.dfi_ras_n_i         ( dfi_ras_n           )
-    ,.dfi_cas_n_i         ( dfi_cas_n           )
-    ,.dfi_we_n_i          ( dfi_we_n            )
-    ,.dfi_reset_n_i       ( dfi_reset_n         )
-    ,.dfi_odt_i           ( dfi_odt             )
-    ,.dfi_wrdata_en_i     ( dfi_wrdata_en       )
-    ,.dfi_wrdata_i        ( dfi_wrdata          )
-    ,.dfi_wrdata_mask_i   ( dfi_wrdata_mask     )
-    ,.dfi_rddata_en_i     ( dfi_rddata_en       )
-    ,.dfi_rddata_o        ( dfi_rddata          )
-    ,.dfi_rddata_valid_o  ( dfi_rddata_valid    )
-    // DDR interface signals
-    ,.ck_p_o              ( ddr_ck_p_o          )
-    ,.ck_n_o              ( ddr_ck_n_o          )
-    ,.cke_o               ( ddr_cke_o           )
-    ,.ba_o                ( ddr_ba_o            )
-    ,.a_o                 ( ddr_addr_o          )
-    ,.cs_n_o              ( ddr_cs_n_o          )
-    ,.ras_n_o             ( ddr_ras_n_o         )
-    ,.cas_n_o             ( ddr_cas_n_o         )
-    ,.we_n_o              ( ddr_we_n_o          )
-    ,.reset_o             ( ddr_reset_n_o       )
-    ,.odt_o               ( ddr_odt_o           )
-    ,.dm_oe_n_o           ( ddr_dm_oen_o        )
-    ,.dm_o                ( ddr_dm_o            )
-    ,.dqs_p_oe_n_o        ( ddr_dqs_p_oen_o     )
-    ,.dqs_p_ie_n_o        ( ddr_dqs_p_ien_o     )
-    ,.dqs_p_o             ( ddr_dqs_p_o         )
-    ,.dqs_p_i             ( dqs_p_li            )
-    ,.dqs_n_oe_n_o        ( ddr_dqs_n_oen_o     )
-    ,.dqs_n_ie_n_o        ( ddr_dqs_n_ien_o     )
-    ,.dqs_n_o             ( ddr_dqs_n_o         )
-    ,.dqs_n_i             ( ~dqs_p_li           )
-    ,.dq_oe_n_o           ( ddr_dq_oen_o        )
-    ,.dq_o                ( ddr_dq_o            )
-    ,.dq_i                ( ddr_dq_i            )
-    // Control and Status Registers
-    ,.dqs_sel_cal         ( dmc_p_i.dqs_sel_cal ));
-    
     
   bsg_dfi_to_fifo 
  #(.dq_data_width_p(dq_data_width_p)
   ,.phy_rdlat_p    (2)
   ) dfi_to_fifo
   // DDR PHY interface clock and reset
-  (.dfi_clk_1x_i        ( dfi_clk_1x_lo       )
-  ,.dfi_clk_2x_i        ( dfi_clk_2x_i        )
+  (.dfi_clk_1x_i        ( dfi_clk_1x_i        )
+  ,.dfi_clk_2x_i        (                     )
   ,.dfi_rst_i           ( dfi_reset           )
   // DFI interface signals
   ,.dfi_bank_i          ( dfi_bank            )
@@ -319,12 +208,12 @@ module bsg_dmc
   ,.dfi_wrdata_i        ( dfi_wrdata          )
   ,.dfi_wrdata_mask_i   ( dfi_wrdata_mask     )
   ,.dfi_rddata_en_i     ( dfi_rddata_en       )
-  ,.dfi_rddata_o        (           )
-  ,.dfi_rddata_valid_o  (     )
+  ,.dfi_rddata_o        ( dfi_rddata          )
+  ,.dfi_rddata_valid_o  ( dfi_rddata_valid    )
   // fifo signals
   ,.fifo_clk_i      (axi_clk_i)
   ,.fifo_reset_i    (axi_reset_i)
-  ,.fifo_error_o    (fifo_error)
+  ,.fifo_error_o    (axi_fifo_error_o)
 
   ,.fifo_wr_v_o     (fifo_wr_v)
   ,.fifo_wr_data_o  (fifo_wr_data)
@@ -348,7 +237,7 @@ module bsg_dmc
   ) fifo_to_axi
   (.clk_i           (axi_clk_i)
   ,.reset_i         (axi_reset_i)
-  ,.fifo_error_i    (fifo_error)
+  ,.fifo_error_i    (axi_fifo_error_o)
   ,.fifo_wr_v_i     (fifo_wr_v)
   ,.fifo_wr_data_i  (fifo_wr_data)
   ,.fifo_wr_ready_o (fifo_wr_ready)
@@ -394,6 +283,5 @@ module bsg_dmc
   ,.axi_rvalid_i
   ,.axi_rready_o
   );
-    
 
 endmodule

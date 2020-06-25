@@ -280,7 +280,7 @@ set SVERILOG_SOURCE_FILES [join "
   $basejump_stl_dir/bsg_test/bsg_nonsynth_clock_gen.v
   $basejump_stl_dir/bsg_test/bsg_nonsynth_reset_gen.v
   $bsg_designs_target_dir/v/bsg_dfi_to_fifo.v
-  $bsg_designs_target_dir/v/bsg_dmc.v
+  $bsg_designs_target_dir/v/bsg_dmc_emulator.v
   $bsg_designs_target_dir/v/bsg_fifo_to_axi.v
   $bsg_designs_target_dir/v/bsg_nonsynth_manycore_axi_mem.v
   $bsg_designs_target_dir/v/bsg_dmc_controller.v
