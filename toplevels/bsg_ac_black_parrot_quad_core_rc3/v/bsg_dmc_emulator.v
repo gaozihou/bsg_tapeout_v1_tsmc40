@@ -39,6 +39,7 @@ module bsg_dmc_emulator
   ,output                            app_sr_active_o
   // Status signal
   ,output                            init_calib_complete_o
+  ,output                            dmc_refresh_o
   // Clock interface signals
   ,input                             ui_clk_i
   ,input                             dfi_clk_1x_i
@@ -185,6 +186,7 @@ module bsg_dmc_emulator
     ,.dmc_p_i               ( dmc_p_i               )
     //
     ,.init_calib_complete_o ( init_calib_complete_o ));
+    assign dmc_refresh_o = ~dfi_cs_n & ~dfi_ras_n & ~dfi_cas_n & dfi_we_n;
     
   bsg_dfi_to_fifo 
  #(.dq_data_width_p(dq_data_width_p)
