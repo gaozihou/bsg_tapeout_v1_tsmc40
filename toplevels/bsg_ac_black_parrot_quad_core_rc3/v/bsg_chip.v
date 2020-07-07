@@ -777,6 +777,18 @@ module bsg_chip
   ,.oclk_data_o(axi_reset_lo)
   );
   
+  logic axi_fifo_error_lo, user_clk_gate_lo;
+  bsg_dfi_clk_gate dfi_clk_gate
+  (.dfi_raw_clk_i   (dfi_clk_1x_lo)
+  ,.dfi_reset_i     (axi_reset_lo)
+
+  ,.axi_clk_i       (axi_clk_lo)
+  ,.axi_reset_i     (axi_reset_lo)
+
+  ,.axi_fifo_error_i(axi_fifo_error_lo)
+  ,.user_clk_gate_o (user_clk_gate_lo)
+  );
+  
 
   bsg_dmc_emulator #
     (.num_adgs_p            ( clk_gen_num_adgs_gp )
@@ -817,6 +829,7 @@ module bsg_chip
     ,.app_sr_active_o       ()
 
     ,.init_calib_complete_o ()
+    ,.dmc_refresh_o         ()
 
     ,.ui_clk_i              ( router_clk_lo        )
     ,.dfi_clk_1x_i          ( dfi_clk_1x_lo        )
@@ -825,7 +838,7 @@ module bsg_chip
     
     ,.axi_clk_i             ( axi_clk_lo           )
     ,.axi_reset_i           ( axi_reset_lo         )
-    ,.axi_fifo_error_o      (                      )
+    ,.axi_fifo_error_o      ( axi_fifo_error_lo    )
 
     ,.axi_awready_i         ( axi_awready          )
     ,.axi_awid_o            ( axi_awid             )
