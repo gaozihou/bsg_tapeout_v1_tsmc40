@@ -780,6 +780,8 @@ module bsg_chip
   logic axi_fifo_error_lo, user_clk_gate_lo;
   bsg_dfi_clk_gate dfi_clk_gate
   (.dfi_raw_clk_i   (dfi_clk_1x_lo)
+  ,.dfi_raw_reset_i (axi_reset_lo)
+  ,.dfi_clk_i       (dfi_clk_1x_lo)
   ,.dfi_reset_i     (axi_reset_lo)
 
   ,.axi_clk_i       (axi_clk_lo)

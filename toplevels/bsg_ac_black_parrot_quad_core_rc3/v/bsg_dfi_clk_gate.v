@@ -12,6 +12,8 @@ module bsg_dfi_clk_gate
   )
   
   (input  dfi_raw_clk_i
+  ,input  dfi_raw_reset_i
+  ,input  dfi_clk_i
   ,input  dfi_reset_i
 
   ,input  axi_clk_i
@@ -25,7 +27,7 @@ module bsg_dfi_clk_gate
   // 
   logic dfi_toggle_r;
   bsg_dff_reset #(.width_p(1)) dfi_toggle_r_dff
-  (.clk_i  (dfi_raw_clk_i)
+  (.clk_i  (dfi_clk_i)
   ,.reset_i(dfi_reset_i)
   ,.data_i (~dfi_toggle_r)
   ,.data_o (dfi_toggle_r)
@@ -48,7 +50,37 @@ module bsg_dfi_clk_gate
   ,.data_o (dfi_toggle_rrr)
   );
   
-  wire dfi_raw_clk_edge_detected = dfi_toggle_rr ^ dfi_toggle_rrr;
+  wire dfi_clk_edge_detected = dfi_toggle_rr ^ dfi_toggle_rrr;
+
+
+  // dfi raw clock edge detection
+  // 
+  logic dfi_raw_toggle_r;
+  bsg_dff_reset #(.width_p(1)) dfi_raw_toggle_r_dff
+  (.clk_i  (dfi_raw_clk_i)
+  ,.reset_i(dfi_raw_reset_i)
+  ,.data_i (~dfi_raw_toggle_r)
+  ,.data_o (dfi_raw_toggle_r)
+  );
+  
+  logic dfi_raw_toggle_rr;
+  bsg_dff_chain 
+ #(.width_p(1)
+  ,.num_stages_p(num_sync_stages_p)
+  ) dfi_raw_toggle_rr_dff
+  (.clk_i  (axi_clk_i)
+  ,.data_i (dfi_raw_toggle_r)
+  ,.data_o (dfi_raw_toggle_rr)
+  );
+  
+  logic dfi_raw_toggle_rrr;
+  bsg_dff #(.width_p(1)) dfi_raw_toggle_rrr_dff
+  (.clk_i  (axi_clk_i)
+  ,.data_i (dfi_raw_toggle_rr)
+  ,.data_o (dfi_raw_toggle_rrr)
+  );
+  
+  wire dfi_raw_clk_edge_detected = dfi_raw_toggle_rr ^ dfi_raw_toggle_rrr;
 
 
   // user clock gate signal generation
@@ -57,7 +89,7 @@ module bsg_dfi_clk_gate
   (.clk_i  (axi_clk_i)
   ,.reset_i(axi_reset_i)
   ,.data_i (axi_fifo_error_i)
-  ,.en_i   (dfi_raw_clk_edge_detected)
+  ,.en_i   ((user_clk_gate_o)? dfi_clk_edge_detected : dfi_raw_clk_edge_detected)
   ,.data_o (user_clk_gate_o)
   );
 
