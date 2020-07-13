@@ -1,5 +1,5 @@
 
-module bsg_xui_tress_test_node
+module bsg_xui_stress_test_node
 
  #(parameter addr_width_p    = "inv"
   ,parameter data_width_p    = "inv"
