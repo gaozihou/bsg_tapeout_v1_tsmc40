@@ -1,10 +1,12 @@
 module bsg_dmc_emulator
-  import bsg_dmc_pkg::bsg_dmc_s;
+  import bsg_dmc_pkg::*;
  #(parameter  num_adgs_p         = 1
   ,parameter  ui_addr_width_p    = "inv"
   ,parameter  ui_data_width_p    = "inv"
   ,parameter  burst_data_width_p = "inv"
   ,parameter  dq_data_width_p    = "inv"
+  ,parameter  cmd_afifo_depth_p  = "inv"
+  ,parameter  cmd_sfifo_depth_p  = "inv"
   ,parameter  axi_id_width_p     = "inv"
   ,parameter  axi_addr_width_p   = "inv"
   ,parameter  axi_data_width_p   = "inv"
@@ -19,7 +21,7 @@ module bsg_dmc_emulator
   ,input                             sys_reset_i
   // User interface signals
   ,input       [ui_addr_width_p-1:0] app_addr_i
-  ,input                       [2:0] app_cmd_i
+  ,input                   app_cmd_e app_cmd_i
   ,input                             app_en_i
   ,output                            app_rdy_o
   ,input                             app_wdf_wren_i
@@ -139,7 +141,9 @@ module bsg_dmc_emulator
     (.ui_addr_width_p       ( ui_addr_width_p       )
     ,.ui_data_width_p       ( ui_data_width_p       )
     ,.burst_data_width_p    ( burst_data_width_p    )
-    ,.dfi_data_width_p      ( dfi_data_width_lp     ))
+    ,.dfi_data_width_p      ( dfi_data_width_lp     )
+    ,.cmd_afifo_depth_p     ( cmd_afifo_depth_p     )
+    ,.cmd_sfifo_depth_p     ( cmd_sfifo_depth_p     ))
   dmc_controller
     // User interface clock and reset
     (.ui_clk_i              ( ui_clk_i              )

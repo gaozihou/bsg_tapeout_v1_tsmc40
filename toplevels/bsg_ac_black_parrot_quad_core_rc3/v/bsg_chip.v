@@ -72,10 +72,10 @@ module bsg_chip
   wire bsg_tag_s  [3:0] dmc_dly_trigger_tag_lines_lo = tag_lines_lo[31+:4];
   wire bsg_tag_s        dmc_ds_tag_lines_lo          = tag_lines_lo[35];
 
-  wire bsg_tag_s [11:0] dmc_cfg_tag_lines_lo         = tag_lines_lo[36+:12];
+  wire bsg_tag_s [12:0] dmc_cfg_tag_lines_lo         = tag_lines_lo[36+:13];
 
   // Tag line for bypass link
-  wire bsg_tag_s bypass_link_tag_lines_lo = tag_lines_lo[48];
+  wire bsg_tag_s bypass_link_tag_lines_lo = tag_lines_lo[49];
 
   // BSG tag master instance
   bsg_tag_master #(.els_p( tag_num_clients_gp )
@@ -189,12 +189,12 @@ module bsg_chip
   wire [wh_did_width_gp-1:0] router_did_lo = router_tag_data_lo.did;
 
   // Tag payload for bsg_dmc control signals
-  logic [11:0][7:0] dmc_cfg_tag_data_lo;
-  logic [11:0]      dmc_cfg_tag_new_data_lo;
+  logic [12:0][7:0] dmc_cfg_tag_data_lo;
+  logic [12:0]      dmc_cfg_tag_new_data_lo;
 
   genvar idx;
   generate
-    for(idx=0;idx<12;idx++) begin: dmc_cfg
+    for(idx=0;idx<13;idx++) begin: dmc_cfg
       bsg_tag_client #(.width_p( 8 ), .default_p( 0 ))
         btc
           (.bsg_tag_i     ( dmc_cfg_tag_lines_lo[idx] )
@@ -691,7 +691,32 @@ module bsg_chip
      ,.app_rd_data_i(app_rd_data_li)
      ,.app_rd_data_end_i(app_rd_data_end_li)
      );
+/*
+  bsg_xui_stress_test_node
+   #(.addr_width_p(paddr_width_p)
+    ,.data_width_p(cce_block_width_p)
+    ,.num_requests_p(5000)
+    ,.nonblock_read_p(0)
+     )
+   xui_node
+    (.clk_i(router_clk_lo)
+     ,.reset_i(router_reset_lo)
+     ,.done_o()
 
+     ,.app_addr_o(app_addr_lo)
+     ,.app_cmd_o(app_cmd_lo)
+     ,.app_en_o(app_en_lo)
+     ,.app_rdy_i(app_rdy_li)
+     ,.app_wdf_wren_o(app_wdf_wren_lo)
+     ,.app_wdf_data_o(app_wdf_data_lo)
+     ,.app_wdf_mask_o(app_wdf_mask_lo)
+     ,.app_wdf_end_o(app_wdf_end_lo)
+     ,.app_wdf_rdy_i(app_wdf_rdy_li)
+     ,.app_rd_data_valid_i(app_rd_data_valid_li)
+     ,.app_rd_data_i(app_rd_data_li)
+     ,.app_rd_data_end_i(app_rd_data_end_li)
+     );
+*/
   bsg_dmc_s dmc_p;
 
   //initial begin
@@ -730,9 +755,9 @@ module bsg_chip
   assign dmc_p.row_width    = dmc_cfg_tag_data_lo[8][7:4];
   assign dmc_p.bank_width   = dmc_cfg_tag_data_lo[9][1:0];
   assign dmc_p.bank_pos     = dmc_cfg_tag_data_lo[9][7:2];
-  assign dmc_p.dqs_sel_cal  = dmc_cfg_tag_data_lo[10][1:0];
-  assign dmc_p.init_cmd_cnt = dmc_cfg_tag_data_lo[10][5:2];
-  wire   dmc_sys_reset_li   = dmc_cfg_tag_data_lo[11][0];
+  assign dmc_p.dqs_sel_cal  = dmc_cfg_tag_data_lo[7][6:4];
+  assign dmc_p.init_cycles  = {dmc_cfg_tag_data_lo[11], dmc_cfg_tag_data_lo[10]};
+  wire   dmc_sys_reset_li   = dmc_cfg_tag_data_lo[12][0];
   
   parameter clk_ratio_p = 12;
   parameter clk_period_p = 3000;
@@ -798,6 +823,8 @@ module bsg_chip
     ,.ui_data_width_p       ( cce_block_width_p   )
     ,.burst_data_width_p    ( cce_block_width_p   )
     ,.dq_data_width_p       ( dmc_data_width_gp   )
+    ,.cmd_afifo_depth_p     ( dmc_cmd_afifo_depth_gp )
+    ,.cmd_sfifo_depth_p     ( dmc_cmd_sfifo_depth_gp )
     ,.axi_id_width_p        ( axi_id_width_p      )
     ,.axi_addr_width_p      ( axi_addr_width_p    )
     ,.axi_data_width_p      ( axi_data_width_p    )
